@@ -1,0 +1,245 @@
+{% extends "layout.html" %}
+
+{% block title %}- Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-chart-line me-2"></i>Entity Risk Dashboard</h2>
+    <div>
+        <a href="/upload" class="btn btn-success">
+            <i class="fas fa-upload me-1"></i> Upload New Data
+        </a>
+        <a href="/reports" class="btn btn-info ms-2">
+            <i class="fas fa-file-alt me-1"></i> Reports
+        </a>
+    </div>
+</div>
+
+<!-- Overview Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card bg-primary text-white">
+            <div class="card-body text-center">
+                <div class="stat-value">{{ entity_count }}</div>
+                <div class="stat-label">Total Entities</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card bg-danger text-white">
+            <div class="card-body text-center">
+                <div class="stat-value">{{ high_risk_count }}</div>
+                <div class="stat-label">High Risk Entities</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card bg-info text-white">
+            <div class="card-body text-center">
+                <div class="stat-value">{{ transaction_count }}</div>
+                <div class="stat-label">Transactions</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card bg-success text-white">
+            <div class="card-body text-center">
+                <div class="stat-value">{% if high_risk_count and entity_count %}{{ ((high_risk_count / entity_count) * 100)|round(1) }}%{% else %}0%{% endif %}</div>
+                <div class="stat-label">Risk Ratio</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-filter me-2"></i>Filters & Controls</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="risk-threshold" class="form-label">Risk Threshold: <span id="threshold-value">0.5</span></label>
+                <input type="range" class="form-range" id="risk-threshold" min="0" max="1" step="0.1" value="0.5">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="entity-search" class="form-label">Search Entity</label>
+                <input type="text" class="form-control" id="entity-search" placeholder="Enter entity name...">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Date Range</label>
+                <div class="input-group">
+                    <input type="date" class="form-control" id="start-date">
+                    <span class="input-group-text">to</span>
+                    <input type="date" class="form-control" id="end-date">
+                    <button class="btn btn-outline-secondary" type="button" id="date-range-apply">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Risk Distribution Chart -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Risk Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="risk-distribution-chart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Entity Type Chart -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5><i class="fas fa-building me-2"></i>Entity Types</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="entity-type-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Entity Network Graph -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-project-diagram me-2"></i>Entity Relationship Network</h5>
+            </div>
+            <div class="card-body">
+                <div id="entity-network-graph" style="height: 500px;"></div>
+                <div class="graph-controls mt-3 text-center">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-secondary" id="zoom-in">
+                            <i class="fas fa-search-plus"></i> Zoom In
+                        </button>
+                        <button class="btn btn-sm btn-secondary" id="zoom-out">
+                            <i class="fas fa-search-minus"></i> Zoom Out
+                        </button>
+                        <button class="btn btn-sm btn-secondary" id="reset-zoom">
+                            <i class="fas fa-sync"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Entities -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-clock me-2"></i>Recently Added Entities</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Entity Name</th>
+                                <th>Type</th>
+                                <th>Added</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entity in recent_entities %}
+                            <tr>
+                                <td>{{ entity.name }}</td>
+                                <td>
+                                    <span class="badge {% if entity.entity_type == 'corporation' %}bg-primary{% elif entity.entity_type == 'non-profit' %}bg-success{% elif entity.entity_type == 'financial_intermediary' %}bg-info{% elif entity.entity_type == 'shell_company' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {{ entity.entity_type }}
+                                    </span>
+                                </td>
+                                <td>{{ entity.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <a href="/entity/{{ entity.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center">No entities found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- High Risk Entities -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-exclamation-triangle me-2 text-danger"></i>High Risk Entities</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Entity Name</th>
+                                <th>Type</th>
+                                <th>Risk Score</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entity, risk in high_risk_entities %}
+                            <tr>
+                                <td>{{ entity.name }}</td>
+                                <td>
+                                    <span class="badge {% if entity.entity_type == 'corporation' %}bg-primary{% elif entity.entity_type == 'non-profit' %}bg-success{% elif entity.entity_type == 'financial_intermediary' %}bg-info{% elif entity.entity_type == 'shell_company' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {{ entity.entity_type }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-danger" role="progressbar" 
+                                             style="width: {{ risk.score * 100 }}%" 
+                                             aria-valuenow="{{ risk.score * 100 }}" 
+                                             aria-valuemin="0" aria-valuemax="100">
+                                            {{ (risk.score * 100)|round(1) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <a href="/entity/{{ entity.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center">No high risk entities found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Custom code for dashboard initialization
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize dashboard components
+        initDashboard();
+    });
+</script>
+{% endblock %}

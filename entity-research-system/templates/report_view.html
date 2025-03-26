@@ -1,0 +1,150 @@
+{% extends "layout.html" %}
+
+{% block title %}- {{ report.title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-alt me-2"></i>{{ report.title }}</h2>
+    <div>
+        <a href="/reports" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i> Back to Reports
+        </a>
+        <button class="btn btn-success" id="export-pdf-btn" data-report-id="{{ report.id }}">
+            <i class="fas fa-download me-1"></i> Export PDF
+        </button>
+        <button class="btn btn-primary" onclick="window.print()">
+            <i class="fas fa-print me-1"></i> Print
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5><i class="fas fa-info-circle me-2"></i>Report Details</h5>
+            <span class="badge {% if report.report_type == 'all_entities' %}bg-primary{% elif report.report_type == 'single_entity' %}bg-info{% elif report.report_type == 'high_risk' %}bg-danger{% elif report.report_type == 'date_range' %}bg-warning{% else %}bg-secondary{% endif %}">
+                {{ report.report_type }}
+            </span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="report-header">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Report Type:</strong> {{ report.report_type }}</p>
+                    <p><strong>Generated:</strong> {{ report.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p><strong>Report ID:</strong> #{{ report.id }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="report-content">
+            {% set report_data = report.content|from_json %}
+            
+            <!-- Store report data for JavaScript access -->
+            <div id="report-data" style="display: none;">{{ report.content }}</div>
+            
+            <!-- Executive Summary -->
+            <div class="report-section">
+                <h4>Executive Summary</h4>
+                <div class="card bg-dark">
+                    <div class="card-body">
+                        {% if report.report_type == 'all_entities' %}
+                            <p>This report provides a comprehensive analysis of all entities in the system ({{ report_data.entities|length }} entities total).</p>
+                            
+                            {% set very_high = report_data.entities|selectattr('risk_score', 'ge', 0.8)|list|length %}
+                            {% set high = report_data.entities|selectattr('risk_score', 'ge', 0.6)|selectattr('risk_score', 'lt', 0.8)|list|length %}
+                            {% set medium = report_data.entities|selectattr('risk_score', 'ge', 0.4)|selectattr('risk_score', 'lt', 0.6)|list|length %}
+                            {% set low = report_data.entities|selectattr('risk_score', 'ge', 0.2)|selectattr('risk_score', 'lt', 0.4)|list|length %}
+                            {% set very_low = report_data.entities|selectattr('risk_score', 'lt', 0.2)|list|length %}
+                            
+                            <p>Risk distribution:</p>
+                            <ul>
+                                <li>Very High Risk (0.8-1.0): {{ very_high }} entities</li>
+                                <li>High Risk (0.6-0.8): {{ high }} entities</li>
+                                <li>Medium Risk (0.4-0.6): {{ medium }} entities</li>
+                                <li>Low Risk (0.2-0.4): {{ low }} entities</li>
+                                <li>Very Low Risk (0.0-0.2): {{ very_low }} entities</li>
+                            </ul>
+                            
+                            {% if very_high > 0 %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Warning:</strong> {{ very_high }} entities have been identified as Very High Risk.
+                            </div>
+                            {% endif %}
+                        {% elif report.report_type == 'single_entity' %}
+                            <p>This report provides a detailed analysis of {{ report_data.entity.name }} ({{ report_data.entity.type }}).</p>
+                            <p>Risk Score: {{ (report_data.entity.risk_score * 100)|round(1) }}% ({{ 'Very High Risk' if report_data.entity.risk_score >= 0.8 else 'High Risk' if report_data.entity.risk_score >= 0.6 else 'Medium Risk' if report_data.entity.risk_score >= 0.4 else 'Low Risk' if report_data.entity.risk_score >= 0.2 else 'Very Low Risk' }})</p>
+                        {% elif report.report_type == 'high_risk' %}
+                            <p>This report focuses on high-risk entities (risk score ≥ 0.6) in the system.</p>
+                            <p>Number of high-risk entities: {{ report_data.entities|length }}</p>
+                        {% elif report.report_type == 'date_range' %}
+                            <p>This report analyzes transactions and entity activity between {{ report_data.start_date }} and {{ report_data.end_date }}.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            {% if report.report_type == 'all_entities' %}
+            <!-- Risk Distribution Chart -->
+            <div class="report-section">
+                <h4>Risk Distribution</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <canvas id="risk-distribution-chart" height="250"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <canvas id="entity-type-chart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Top Risk Entities -->
+            <div class="report-section">
+                <h4>Top Risk Entities</h4>
+                <div id="top-risk-entities"></div>
+            </div>
+            {% endif %}
+            
+            {% if report.report_type == 'single_entity' %}
+            <!-- Entity Timeline -->
+            <div class="report-section">
+                <h4>Entity Timeline</h4>
+                <div id="entity-timeline" style="height: 250px;"></div>
+            </div>
+            
+            <!-- Risk Factor Breakdown -->
+            <div class="report-section">
+                <h4>Risk Factor Breakdown</h4>
+                <canvas id="risk-factor-breakdown" height="250"></canvas>
+            </div>
+            {% endif %}
+            
+            <!-- Raw Data -->
+            <div class="report-section">
+                <h4>
+                    Raw Data
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#raw-data">
+                        <i class="fas fa-code"></i> Toggle View
+                    </button>
+                </h4>
+                <div class="collapse" id="raw-data">
+                    <pre class="bg-dark text-light p-3 rounded"><code>{{ report.content }}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize report visualizations
+        initReportVisualizations();
+    });
+</script>
+{% endblock %}

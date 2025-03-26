@@ -1,0 +1,128 @@
+{% extends "layout.html" %}
+
+{% block title %}- Reports{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-alt me-2"></i>Reports</h2>
+    <div>
+        <a href="/dashboard" class="btn btn-primary">
+            <i class="fas fa-chart-line me-1"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Report Generator -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-plus-circle me-2"></i>Generate New Report</h5>
+            </div>
+            <div class="card-body">
+                <form id="report-generator-form" action="/generate-report" method="post">
+                    <div class="mb-3">
+                        <label for="report-type" class="form-label">Report Type</label>
+                        <select class="form-select" id="report-type" name="report_type" required>
+                            <option value="all_entities">All Entities Risk Assessment</option>
+                            <option value="single_entity">Single Entity Analysis</option>
+                            <option value="high_risk">High Risk Entities Only</option>
+                            <option value="date_range">Transaction Date Range Analysis</option>
+                        </select>
+                    </div>
+                    
+                    <div id="entity-select" style="display: none;">
+                        <div class="mb-3">
+                            <label for="entity-id" class="form-label">Select Entity</label>
+                            <select class="form-select" id="entity-id" name="entity_id">
+                                <!-- This would be populated with actual entities -->
+                                <option value="">-- Select Entity --</option>
+                                {% for entity in entities %}
+                                <option value="{{ entity.id }}">{{ entity.name }} ({{ entity.entity_type }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="date-range-fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="start-date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="report-start-date" name="start_date">
+                        </div>
+                        <div class="mb-3">
+                            <label for="end-date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="report-end-date" name="end_date">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-file-export me-1"></i> Generate Report
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reports List -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list me-2"></i>Available Reports</h5>
+            </div>
+            <div class="card-body">
+                {% if reports %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Report Title</th>
+                                <th>Type</th>
+                                <th>Generated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in reports %}
+                            <tr>
+                                <td>{{ report.title }}</td>
+                                <td>
+                                    <span class="badge {% if report.report_type == 'all_entities' %}bg-primary{% elif report.report_type == 'single_entity' %}bg-info{% elif report.report_type == 'high_risk' %}bg-danger{% elif report.report_type == 'date_range' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                        {{ report.report_type }}
+                                    </span>
+                                </td>
+                                <td>{{ report.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="/view-report/{{ report.id }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye me-1"></i> View
+                                        </a>
+                                        <button class="btn btn-sm btn-success" onclick="exportReportAsPDF()" data-report-id="{{ report.id }}">
+                                            <i class="fas fa-download me-1"></i> Export
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No reports available. Generate your first report using the form on the left.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set up report generator functionality
+        setupReportGenerator();
+    });
+</script>
+{% endblock %}

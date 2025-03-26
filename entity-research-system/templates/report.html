@@ -1,0 +1,477 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ report.title }} - Entity Research & Risk System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="/reports" class="btn btn-sm btn-outline-secondary mb-2">
+            <i class="fas fa-arrow-left me-1"></i>Back to Reports
+        </a>
+        <h1 class="mb-0">{{ report.title }}</h1>
+    </div>
+    <div class="d-flex">
+        <button class="btn btn-outline-primary me-2" onclick="window.print()">
+            <i class="fas fa-print me-1"></i>Print
+        </button>
+        <a href="/entity/{{ entity.id }}" class="btn btn-primary">
+            <i class="fas fa-search me-1"></i>View Entity
+        </a>
+    </div>
+</div>
+
+{% if content %}
+{% set report_content = content %}
+
+<div class="card border-0 shadow-sm mb-4 report-header">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="mb-2">
+                    <strong>Entity:</strong> {{ entity.name }}
+                    <span class="badge bg-info ms-2">{{ entity.entity_type|capitalize }}</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Report Type:</strong> 
+                    <span class="badge bg-primary">{{ report.report_type|replace('_', ' ')|capitalize }}</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Generated:</strong> {{ report.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+                {% if report_content.report_metadata %}
+                <div class="mb-2">
+                    <strong>Reference:</strong> REP-{{ report.id }}-{{ report.created_at.strftime('%Y%m%d') }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if report_content.risk_assessment and report_content.risk_assessment.score %}
+                <div class="risk-score-large risk-{{ 'high' if report_content.risk_assessment.score >= 7 else 'medium' if report_content.risk_assessment.score >= 4 else 'low' }}">
+                    <div class="score">{{ report_content.risk_assessment.score }}</div>
+                    <div class="label">Risk Score</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h2 class="card-title h5 mb-0">Executive Summary</h2>
+    </div>
+    <div class="card-body">
+        {% if report_content.ai_analysis and report_content.ai_analysis.entity_profile %}
+        <p>{{ report_content.ai_analysis.entity_profile.summary }}</p>
+        
+        {% if report_content.risk_assessment %}
+        <div class="alert alert-{{ 'danger' if report_content.risk_assessment.score >= 7 else 'warning' if report_content.risk_assessment.score >= 4 else 'success' }} mt-3">
+            <h5 class="alert-heading">Risk Level: {{ report_content.risk_assessment.level|capitalize }}</h5>
+            <p>Entity <strong>{{ entity.name }}</strong> has been assessed with a risk score of 
+            <strong>{{ report_content.risk_assessment.score }}</strong>, categorizing it as 
+            <strong>{{ report_content.risk_assessment.level|upper }} RISK</strong>.</p>
+            
+            {% if report_content.risk_assessment.factors %}
+            <hr>
+            <p class="mb-0">Primary risk factors include:</p>
+            <ul class="mb-0">
+                {% for factor in report_content.risk_assessment.factors %}
+                <li>{{ factor.description }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% elif report_content.entity_information %}
+        <p>
+            This report provides a comprehensive assessment of <strong>{{ entity.name }}</strong>, 
+            a {{ entity.entity_type|replace('_', ' ') }} entity.
+            {% if report_content.risk_assessment %}
+            The entity has been assigned a risk score of <strong>{{ report_content.risk_assessment.score }}</strong>,
+            indicating a <strong>{{ report_content.risk_assessment.level }}</strong> level of risk.
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Entity Information Section -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h2 class="card-title h5 mb-0">Entity Information</h2>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Entity Name</th>
+                            <td>{{ report_content.entity_information.name }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Entity Type</th>
+                            <td>{{ report_content.entity_information.type|capitalize }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Identifier</th>
+                            <td>{{ report_content.entity_information.identifier or 'Not available' }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Status</th>
+                            <td>
+                                <span class="badge bg-{{ 'success' if report_content.entity_information.status == 'validated' else 'warning' if report_content.entity_information.status == 'suspicious' else 'info' }}">
+                                    {{ report_content.entity_information.status|capitalize }}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Source</th>
+                            <td>{{ report_content.entity_information.source|capitalize }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">First Identified</th>
+                            <td>{{ report_content.entity_information.created_at }}</td>
+                        </tr>
+                        {% if report_content.entity_information.additional_info %}
+                        <tr>
+                            <th scope="row">Additional Info</th>
+                            <td>
+                                {% for key, value in report_content.entity_information.additional_info.items() %}
+                                <div><strong>{{ key|capitalize }}:</strong> {{ value }}</div>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Analysis Section -->
+{% if report_content.ai_analysis %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h2 class="card-title h5 mb-0">AI Analysis</h2>
+    </div>
+    <div class="card-body">
+        {% if report_content.ai_analysis.entity_profile %}
+        <div class="mb-4">
+            <h6 class="fw-bold">Entity Profile</h6>
+            <p>{{ report_content.ai_analysis.entity_profile.summary }}</p>
+        </div>
+        {% endif %}
+        
+        {% if report_content.ai_analysis.transaction_patterns %}
+        <div class="mb-4">
+            <h6 class="fw-bold">Transaction Pattern Analysis</h6>
+            <ul class="list-group">
+                {% for pattern in report_content.ai_analysis.transaction_patterns %}
+                <li class="list-group-item">{{ pattern }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if report_content.ai_analysis.risk_indicators %}
+        <div class="mb-4">
+            <h6 class="fw-bold">Risk Indicators</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Indicator</th>
+                            <th>Severity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for indicator in report_content.ai_analysis.risk_indicators %}
+                        <tr>
+                            <td>
+                                {% if indicator.description %}
+                                {{ indicator.description }}
+                                {% else %}
+                                {{ indicator }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if indicator.severity %}
+                                <span class="badge bg-{{ 'danger' if indicator.severity == 'high' else 'warning' if indicator.severity == 'medium' else 'success' }}">
+                                    {{ indicator.severity|capitalize }}
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if report_content.ai_analysis.anomalies %}
+        <div class="mb-4">
+            <h6 class="fw-bold">Anomalies Detected</h6>
+            <ul class="list-group">
+                {% for anomaly in report_content.ai_analysis.anomalies %}
+                <li class="list-group-item">{{ anomaly }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Transaction Summary Section -->
+{% if report_content.transaction_summary %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h2 class="card-title h5 mb-0">Transaction Summary</h2>
+    </div>
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card text-center p-3 border rounded">
+                    <div class="stat-title">Total Transactions</div>
+                    <div class="stat-value">{{ report_content.transaction_summary.total_count }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center p-3 border rounded">
+                    <div class="stat-title">As Sender</div>
+                    <div class="stat-value">{{ report_content.transaction_summary.as_sender }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center p-3 border rounded">
+                    <div class="stat-title">As Receiver</div>
+                    <div class="stat-value">{{ report_content.transaction_summary.as_receiver }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center p-3 border rounded">
+                    <div class="stat-title">Net Flow</div>
+                    <div class="stat-value {{ 'text-success' if (report_content.transaction_summary.total_volume_received - report_content.transaction_summary.total_volume_sent) >= 0 else 'text-danger' }}">
+                        ${{ "%.2f"|format((report_content.transaction_summary.total_volume_received - report_content.transaction_summary.total_volume_sent)|float) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if report_content.transaction_summary.transaction_types %}
+        <div class="mb-3">
+            <h6 class="fw-bold">Transaction Types</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for type, count in report_content.transaction_summary.transaction_types.items() %}
+                        <tr>
+                            <td>{{ type|capitalize }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Evidence Summary Section -->
+{% if report_content.evidence_summary %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h2 class="card-title h5 mb-0">Evidence Summary</h2>
+    </div>
+    <div class="card-body">
+        {% if report_content.evidence_summary.key_findings %}
+        <div class="mb-4">
+            <h6 class="fw-bold">Key Findings</h6>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Finding</th>
+                            <th>Source</th>
+                            <th>Importance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for finding in report_content.evidence_summary.key_findings %}
+                        <tr>
+                            <td>{{ finding.finding }}</td>
+                            <td>{{ finding.source }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'danger' if finding.importance == 'critical' else 'warning' if finding.importance == 'high' else 'info' if finding.importance == 'medium' else 'success' }}">
+                                    {{ finding.importance|capitalize }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if report_content.evidence_summary.by_source %}
+        <div>
+            <h6 class="fw-bold">Evidence Sources</h6>
+            <div class="row">
+                {% for source, count in report_content.evidence_summary.by_source.items() %}
+                <div class="col-md-4 mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="me-2">
+                            <i class="fas fa-{{ 'database' if source == 'opencorporates' else 'newspaper' if source == 'news' else 'exclamation-triangle' if source == 'sanctions' else 'brain' if source == 'ai_analysis' else 'file-alt' }} text-primary"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold">{{ source|replace('_', ' ')|capitalize }}</div>
+                            <div>{{ count }} item{{ 's' if count != 1 else '' }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Recommendations Section -->
+{% if report_content.recommendations %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h2 class="card-title h5 mb-0">Recommendations</h2>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Recommended Action</th>
+                        <th>Priority</th>
+                        <th>Rationale</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in report_content.recommendations %}
+                    <tr>
+                        <td>{{ rec.action }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'danger' if rec.priority == 'high' else 'warning' if rec.priority == 'medium' else 'success' }}">
+                                {{ rec.priority|capitalize }}
+                            </span>
+                        </td>
+                        <td>{{ rec.rationale }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="report-footer text-center mt-5 mb-3">
+    <p class="small text-muted">
+        This report was generated automatically by the Entity Research & Risk System on {{ report.created_at.strftime('%Y-%m-%d at %H:%M') }}.
+        Report ID: REP-{{ report.id }}-{{ report.created_at.strftime('%Y%m%d') }}
+    </p>
+</div>
+
+{% else %}
+<div class="alert alert-danger">
+    <i class="fas fa-exclamation-circle me-2"></i>Error: Report content not available
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+@media print {
+    .navbar, .footer, .btn, form, .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        break-inside: avoid;
+    }
+    
+    body {
+        font-size: 12pt;
+    }
+    
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+.risk-score-large {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.risk-score-large.risk-high {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: var(--bs-danger);
+}
+
+.risk-score-large.risk-medium {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: var(--bs-warning);
+}
+
+.risk-score-large.risk-low {
+    background-color: rgba(40, 167, 69, 0.2);
+    color: var(--bs-success);
+}
+
+.risk-score-large .score {
+    font-size: 2.5rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.risk-score-large .label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.stat-card {
+    background-color: var(--bs-dark);
+    border-radius: 0.5rem;
+}
+
+.stat-card .stat-title {
+    font-size: 0.85rem;
+    color: var(--bs-secondary);
+}
+
+.stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: bold;
+}
+</style>
+{% endblock %}

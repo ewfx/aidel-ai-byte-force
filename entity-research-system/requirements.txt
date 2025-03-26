@@ -1,0 +1,12 @@
+email-validator
+flask
+flask-login
+flask-sqlalchemy
+gunicorn
+openai
+pandas
+psycopg2-binary
+requests
+routes
+sqlalchemy
+werkzeug

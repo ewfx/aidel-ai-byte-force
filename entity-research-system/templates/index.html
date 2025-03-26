@@ -1,0 +1,177 @@
+{% extends "layout.html" %}
+
+{% block title %}- Home{% endblock %}
+
+{% block content %}
+<div class="jumbotron bg-dark text-light p-5 mb-4 rounded">
+    <div class="container">
+        <h1 class="display-4"><i class="fas fa-shield-alt me-2"></i>Entity Research & Risk Assessment</h1>
+        <p class="lead">A Generative AI-powered system for automated entity research, verification and risk-scoring from transaction data.</p>
+        <hr class="my-4">
+        <p>Identify, verify, and evaluate entities from complex transaction data with advanced AI analysis and visualization.</p>
+        <div class="mt-4">
+            <a href="/dashboard" class="btn btn-primary btn-lg me-2">
+                <i class="fas fa-chart-line me-2"></i>View Dashboard
+            </a>
+            <a href="/upload" class="btn btn-success btn-lg">
+                <i class="fas fa-upload me-2"></i>Upload Transaction Data
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-robot me-2 text-primary"></i>AI-Powered Analysis</h5>
+                <p class="card-text">Advanced AI algorithms identify entities from transaction data and gather evidence from multiple sources to provide comprehensive risk assessment.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-network-wired me-2 text-success"></i>Entity Relationship Mapping</h5>
+                <p class="card-text">Visualize complex relationships between entities, uncovering hidden connections and transaction patterns that may indicate risk.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-shield-alt me-2 text-danger"></i>Risk Scoring</h5>
+                <p class="card-text">Sophisticated risk assessment algorithms evaluate entities based on multiple factors and provide actionable insights.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>How It Works</h4>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-upload fa-3x mb-3 text-primary"></i>
+                            <h5>Upload Data</h5>
+                            <p class="text-muted">Upload transaction data in various formats (CSV, Excel, JSON)</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-brain fa-3x mb-3 text-info"></i>
+                            <h5>AI Processing</h5>
+                            <p class="text-muted">Advanced AI identifies entities and gathers evidence</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-chart-bar fa-3x mb-3 text-warning"></i>
+                            <h5>Risk Assessment</h5>
+                            <p class="text-muted">Entities are scored based on multiple risk factors</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-file-alt fa-3x mb-3 text-success"></i>
+                            <h5>Generate Reports</h5>
+                            <p class="text-muted">Detailed reports with actionable insights</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Key Features</h4>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item bg-dark text-light">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Entity identification from transaction data
+                    </li>
+                    <li class="list-group-item bg-dark text-light">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Automated evidence gathering from multiple sources
+                    </li>
+                    <li class="list-group-item bg-dark text-light">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Risk scoring mechanism for identified entities
+                    </li>
+                    <li class="list-group-item bg-dark text-light">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Interactive data visualization dashboard
+                    </li>
+                    <li class="list-group-item bg-dark text-light">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Flexible search and filtering capabilities
+                    </li>
+                    <li class="list-group-item bg-dark text-light">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Support for multiple data formats
+                    </li>
+                    <li class="list-group-item bg-dark text-light">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Comprehensive report generation
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Getting Started</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-info-circle me-2"></i>Ready to start?</h5>
+                    <p>Follow these simple steps to begin analyzing your transaction data:</p>
+                </div>
+                <ol class="list-group list-group-numbered mb-4">
+                    <li class="list-group-item bg-dark text-light d-flex">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Prepare your transaction data</div>
+                            Organize your data in CSV, Excel, or JSON format
+                        </div>
+                    </li>
+                    <li class="list-group-item bg-dark text-light d-flex">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Upload to the system</div>
+                            Use the upload page to submit your data files
+                        </div>
+                    </li>
+                    <li class="list-group-item bg-dark text-light d-flex">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Review the analysis</div>
+                            Explore the dashboard to see entity relationships and risk assessments
+                        </div>
+                    </li>
+                    <li class="list-group-item bg-dark text-light d-flex">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Generate reports</div>
+                            Create comprehensive reports for further action
+                        </div>
+                    </li>
+                </ol>
+                <div class="text-center">
+                    <a href="/upload" class="btn btn-primary btn-lg">
+                        <i class="fas fa-rocket me-2"></i>Get Started Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

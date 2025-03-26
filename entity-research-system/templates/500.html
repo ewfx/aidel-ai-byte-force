@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block title %}- Server Error{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="text-center">
+        <h1 class="display-1 fw-bold">500</h1>
+        <p class="fs-3">
+            <span class="text-danger">Oops!</span> Server Error.
+        </p>
+        <p class="lead">
+            We're experiencing some technical difficulties.
+        </p>
+        <p>
+            Please try again later or contact support if the problem persists.
+        </p>
+        <a href="/" class="btn btn-primary">
+            <i class="fas fa-home me-1"></i> Go Home
+        </a>
+    </div>
+</div>
+{% endblock %}

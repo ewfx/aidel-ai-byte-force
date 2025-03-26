@@ -1,0 +1,334 @@
+{% extends "layout.html" %}
+
+{% block title %}{% if entity %}- {{ entity.name }}{% else %}- Entities{% endif %}{% endblock %}
+
+{% block content %}
+{% if entity %}
+<!-- Single Entity View -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-building me-2"></i>{{ entity.name }}</h2>
+    <div>
+        <a href="/entities" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i> Back to Entities
+        </a>
+        <button class="btn btn-primary" onclick="window.print()">
+            <i class="fas fa-print me-1"></i> Print
+        </button>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Entity Summary -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-2"></i>Entity Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Entity Type:</strong>
+                        <span class="badge {% if entity.entity_type == 'corporation' %}bg-primary{% elif entity.entity_type == 'non-profit' %}bg-success{% elif entity.entity_type == 'financial_intermediary' %}bg-info{% elif entity.entity_type == 'shell_company' %}bg-danger{% else %}bg-secondary{% endif %} ms-2">
+                            {{ entity.entity_type }}
+                        </span>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Created:</strong> {{ entity.created_at.strftime('%Y-%m-%d') }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Source:</strong> {{ entity.source_file }}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Description:</strong>
+                    <p>{{ entity.description or 'No description available.' }}</p>
+                </div>
+                
+                {% if risk_score %}
+                <div class="card bg-dark mb-3">
+                    <div class="card-header">
+                        <h5>Risk Assessment</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-4 text-center">
+                                <div class="display-4 fw-bold {% if risk_score.score >= 0.8 %}text-danger{% elif risk_score.score >= 0.6 %}text-warning{% elif risk_score.score >= 0.4 %}text-info{% else %}text-success{% endif %}">
+                                    {{ (risk_score.score * 100)|round(1) }}%
+                                </div>
+                                <div class="mt-2">
+                                    <span class="badge {% if risk_score.score >= 0.8 %}bg-danger{% elif risk_score.score >= 0.6 %}bg-warning{% elif risk_score.score >= 0.4 %}bg-info{% else %}bg-success{% endif %}">
+                                        {% if risk_score.score >= 0.8 %}
+                                            Very High Risk
+                                        {% elif risk_score.score >= 0.6 %}
+                                            High Risk
+                                        {% elif risk_score.score >= 0.4 %}
+                                            Medium Risk
+                                        {% elif risk_score.score >= 0.2 %}
+                                            Low Risk
+                                        {% else %}
+                                            Very Low Risk
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <h6>Key Risk Factors:</h6>
+                                <ul class="list-group">
+                                    {% if risk_score.factors %}
+                                        {% for factor in risk_score.factors|sort(attribute='weight', reverse=True)|slice(5) %}
+                                            <li class="list-group-item bg-dark text-light">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <span>{{ factor.factor }}</span>
+                                                    <span class="badge {% if factor.weight >= 0.7 %}bg-danger{% elif factor.weight >= 0.5 %}bg-warning{% else %}bg-info{% endif %}">
+                                                        {{ (factor.weight * 100)|round(0) }}%
+                                                    </span>
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="list-group-item bg-dark text-light">No risk factors identified</li>
+                                    {% endif %}
+                                </ul>
+                                <div class="text-muted mt-2 small">Last updated: {{ risk_score.last_updated.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Related Entities -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-project-diagram me-2"></i>Connected Entities</h5>
+            </div>
+            <div class="card-body">
+                {% if connected_entities %}
+                <ul class="list-group">
+                    {% for connected in connected_entities %}
+                    <li class="list-group-item bg-dark text-light">
+                        <div class="d-flex w-100 justify-content-between">
+                            <div>
+                                <a href="/entity/{{ connected.id }}" class="text-decoration-none text-light">{{ connected.name }}</a>
+                                <span class="badge {% if connected.entity_type == 'corporation' %}bg-primary{% elif connected.entity_type == 'non-profit' %}bg-success{% elif connected.entity_type == 'financial_intermediary' %}bg-info{% elif connected.entity_type == 'shell_company' %}bg-danger{% else %}bg-secondary{% endif %} ms-2">
+                                    {{ connected.entity_type }}
+                                </span>
+                            </div>
+                            <div>
+                                <a href="/entity/{{ connected.id }}" class="btn btn-sm btn-outline-light">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="alert alert-info">No connected entities found.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Evidence -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-search me-2"></i>Evidence & Findings</h5>
+            </div>
+            <div class="card-body">
+                {% if evidence %}
+                <div class="table-responsive">
+                    <table class="table table-hover evidence-table">
+                        <thead>
+                            <tr>
+                                <th>Source</th>
+                                <th>Content</th>
+                                <th class="confidence-column">Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in evidence %}
+                            <tr>
+                                <td>{{ item.source }}</td>
+                                <td>{{ item.content }}</td>
+                                <td>{{ item.confidence }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">No evidence found for this entity.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transactions -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-exchange-alt me-2"></i>Related Transactions</h5>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover transaction-table">
+                        <thead>
+                            <tr>
+                                <th>From</th>
+                                <th>To</th>
+                                <th class="amount-column">Amount</th>
+                                <th class="date-column">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in transactions %}
+                            <tr>
+                                <td>
+                                    {% if tx.sender == entity.name %}
+                                    <strong class="text-success">{{ tx.sender }}</strong>
+                                    {% else %}
+                                    {{ tx.sender }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if tx.receiver == entity.name %}
+                                    <strong class="text-success">{{ tx.receiver }}</strong>
+                                    {% else %}
+                                    {{ tx.receiver }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ tx.amount }} {{ tx.currency }}</td>
+                                <td>{{ tx.timestamp.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">No transactions found for this entity.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Entities List View -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-building me-2"></i>Entities</h2>
+    <div>
+        <a href="/upload" class="btn btn-success">
+            <i class="fas fa-upload me-1"></i> Upload New Data
+        </a>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-filter me-2"></i>Filters</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="entity-search-input" class="form-label">Search</label>
+                <input type="text" class="form-control" id="entity-search-input" placeholder="Entity name, type...">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="entity-type-filter" class="form-label">Entity Type</label>
+                <select class="form-select" id="entity-type-filter">
+                    <option value="all">All Types</option>
+                    <option value="corporation">Corporation</option>
+                    <option value="non-profit">Non-Profit</option>
+                    <option value="financial_intermediary">Financial Intermediary</option>
+                    <option value="shell_company">Shell Company</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="risk-level-filter" class="form-label">Risk Level</label>
+                <select class="form-select" id="risk-level-filter">
+                    <option value="all">All Levels</option>
+                    <option value="very-high">Very High</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                    <option value="very-low">Very Low</option>
+                </select>
+            </div>
+            <div class="col-md-2 mb-3 d-flex align-items-end">
+                <button id="reset-filters-btn" class="btn btn-secondary w-100">
+                    <i class="fas fa-sync-alt me-1"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Entities Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5><i class="fas fa-list me-2"></i>Entity List</h5>
+            <span id="entity-count" class="badge bg-secondary">Showing {{ entities|length }} entities</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover entity-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th class="entity-type-column">Type</th>
+                        <th>Name</th>
+                        <th>Source</th>
+                        <th>Created</th>
+                        <th class="risk-score-column">Risk Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entity in entities %}
+                    <tr class="entity-row" data-entity-name="{{ entity.name }}" data-entity-type="{{ entity.entity_type }}" data-risk-score="{{ entity.risk_scores[0].score if entity.risk_scores else 0 }}">
+                        <td>{{ entity.id }}</td>
+                        <td>{{ entity.entity_type }}</td>
+                        <td>{{ entity.name }}</td>
+                        <td>{{ entity.source_file }}</td>
+                        <td>{{ entity.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ entity.risk_scores[0].score if entity.risk_scores else 0 }}</td>
+                        <td>
+                            <a href="/entity/{{ entity.id }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">No entities found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize DataTables for entity details page
+        initDataTables();
+    });
+</script>
+{% endblock %}
