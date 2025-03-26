@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Search Entities - Entity Research System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1><i class="fas fa-search me-2"></i> Search Entities</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('upload') }}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-upload me-1"></i> Upload Data
+            </a>
+            <a href="{{ url_for('network_view') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-project-diagram me-1"></i> Network View
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Search Filters -->
+<div class="search-filters">
+    <form action="{{ url_for('entities') }}" method="get">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="search" name="search" value="{{ search }}" placeholder="Search entities...">
+                    <label for="search">Search entities...</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-floating">
+                    <select class="form-select" id="entity_type" name="entity_type">
+                        <option value="">All Types</option>
+                        {% for type in entity_types %}
+                        <option value="{{ type }}" {% if entity_type == type %}selected{% endif %}>
+                            {{ type|replace('_', ' ')|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <label for="entity_type">Entity Type</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-floating">
+                    <select class="form-select" id="risk_level" name="risk_level">
+                        <option value="">All Risk Levels</option>
+                        {% for level in risk_levels %}
+                        <option value="{{ level }}" {% if risk_level == level %}selected{% endif %}>
+                            {{ level|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <label for="risk_level">Risk Level</label>
+                </div>
+            </div>
+            <div class="col-md-2 d-flex align-items-center">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Results -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            Search Results
+            {% if search or risk_level or entity_type %}
+            <small class="text-muted ms-2">
+                {% if search %}Search: "{{ search }}"{% endif %}
+                {% if entity_type %}Type: {{ entity_type|replace('_', ' ')|title }}{% endif %}
+                {% if risk_level %}Risk: {{ risk_level|title }}{% endif %}
+            </small>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if entities %}
+        <div class="table-responsive">
+            <table id="entityTable" class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Risk Score</th>
+                        <th>Risk Level</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entity in entities %}
+                    <tr>
+                        <td>{{ entity.name }}</td>
+                        <td>{{ entity.entity_type.value }}</td>
+                        <td>{{ entity.risk_score|round(2) }}</td>
+                        <td>{{ entity.risk_level.value }}</td>
+                        <td>
+                            <a href="{{ url_for('entity_details', entity_id=entity.id) }}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-info-circle"></i>
+                            </a>
+                            <a href="{{ url_for('report', entity_id=entity.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-file-alt"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i> No entities found matching your search criteria.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Risk Distribution Chart -->
+{% if entities %}
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Risk Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="riskDistributionChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Entity Types</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="entityTypeChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/data_tables.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize DataTable
+        initEntitySearchTable();
+        
+        {% if entities %}
+        // Risk Distribution Chart
+        const riskCtx = document.getElementById('riskDistributionChart').getContext('2d');
+        
+        // Count risk levels
+        const riskLevels = {
+            'low': 0,
+            'medium': 0,
+            'high': 0,
+            'critical': 0
+        };
+        
+        {% for entity in entities %}
+        riskLevels['{{ entity.risk_level.value }}']++;
+        {% endfor %}
+        
+        const riskChart = new Chart(riskCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Low', 'Medium', 'High', 'Critical'],
+                datasets: [{
+                    data: [
+                        riskLevels.low,
+                        riskLevels.medium,
+                        riskLevels.high, 
+                        riskLevels.critical
+                    ],
+                    backgroundColor: [
+                        '#28a745', // success - low
+                        '#ffc107', // warning - medium
+                        '#dc3545', // danger - high
+                        '#212529'  // dark - critical
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                let value = context.raw || 0;
+                                let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                let percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Entity Type Chart
+        const entityTypeCtx = document.getElementById('entityTypeChart').getContext('2d');
+        
+        // Count entity types
+        const entityTypes = {
+            'corporation': 0,
+            'non_profit': 0,
+            'shell_company': 0,
+            'financial_intermediary': 0,
+            'individual': 0,
+            'other': 0
+        };
+        
+        {% for entity in entities %}
+        entityTypes['{{ entity.entity_type.value }}']++;
+        {% endfor %}
+        
+        const entityTypeChart = new Chart(entityTypeCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Corporation', 'Non-Profit', 'Shell Company', 'Financial', 'Individual', 'Other'],
+                datasets: [{
+                    label: 'Entity Count',
+                    data: [
+                        entityTypes.corporation,
+                        entityTypes.non_profit,
+                        entityTypes.shell_company,
+                        entityTypes.financial_intermediary,
+                        entityTypes.individual,
+                        entityTypes.other
+                    ],
+                    backgroundColor: [
+                        '#2c7be5', // primary
+                        '#27ae60', // custom green
+                        '#e74c3c', // custom red
+                        '#3498db', // custom blue
+                        '#9b59b6', // custom purple
+                        '#95a5a6'  // custom gray
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

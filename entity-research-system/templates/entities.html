@@ -1,0 +1,353 @@
+{% extends "layout.html" %}
+
+{% block title %}Entity Management - Entity Research & Risk System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Entity Management</h1>
+    <a href="/upload" class="btn btn-primary">
+        <i class="fas fa-upload me-2"></i>Upload New Data
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h5 class="card-title mb-0">Filter Entities</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" action="/entities" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label">Entity Name</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ request.args.get('search', '') }}" placeholder="Search by name">
+            </div>
+            <div class="col-md-2">
+                <label for="type" class="form-label">Entity Type</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">All Types</option>
+                    <option value="corporation" {% if request.args.get('type') == 'corporation' %}selected{% endif %}>Corporation</option>
+                    <option value="non-profit" {% if request.args.get('type') == 'non-profit' %}selected{% endif %}>Non-Profit</option>
+                    <option value="shell" {% if request.args.get('type') == 'shell' %}selected{% endif %}>Shell Company</option>
+                    <option value="financial_intermediary" {% if request.args.get('type') == 'financial_intermediary' %}selected{% endif %}>Financial Intermediary</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Status</option>
+                    <option value="identified" {% if request.args.get('status') == 'identified' %}selected{% endif %}>Identified</option>
+                    <option value="validated" {% if request.args.get('status') == 'validated' %}selected{% endif %}>Validated</option>
+                    <option value="suspicious" {% if request.args.get('status') == 'suspicious' %}selected{% endif %}>Suspicious</option>
+                    <option value="cleared" {% if request.args.get('status') == 'cleared' %}selected{% endif %}>Cleared</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="risk_min" class="form-label">Min Risk Score</label>
+                <input type="number" class="form-control" id="risk_min" name="risk_min" 
+                       value="{{ request.args.get('risk_min', '') }}" min="0" max="10" step="0.1" placeholder="Min">
+            </div>
+            <div class="col-md-2">
+                <label for="risk_max" class="form-label">Max Risk Score</label>
+                <input type="number" class="form-control" id="risk_max" name="risk_max" 
+                       value="{{ request.args.get('risk_max', '') }}" min="0" max="10" step="0.1" placeholder="Max">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0">
+        <h5 class="card-title mb-0">Entity List</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="entityTable">
+                <thead>
+                    <tr>
+                        <th>Entity Name</th>
+                        <th>Entity Type</th>
+                        <th>Status</th>
+                        <th>Risk Score</th>
+                        <th>Identified</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entity, risk in entities %}
+                    <tr>
+                        <td>{{ entity.name }}</td>
+                        <td>{{ entity.entity_type|capitalize }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if entity.status == 'validated' else 'warning' if entity.status == 'suspicious' else 'info' }}">
+                                {{ entity.status|capitalize }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="risk-score-pill risk-{{ 'high' if risk.score >= 7 else 'medium' if risk.score >= 4 else 'low' }}">
+                                {{ risk.score }}
+                            </div>
+                        </td>
+                        <td title="{{ entity.created_at }}">{{ entity.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="/entity/{{ entity.id }}" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-search me-1"></i>Details
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-info dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item analyze-entity" href="#" data-entity-id="{{ entity.id }}">
+                                            <i class="fas fa-brain me-1"></i>Analyze with AI
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item generate-report" href="#" data-entity-id="{{ entity.id }}">
+                                            <i class="fas fa-file-alt me-1"></i>Generate Report
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">No entities found matching the criteria</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- AI Analysis Modal -->
+<div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="aiAnalysisModalLabel">AI Analysis in Progress</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="analysisProgress">
+                    <div class="d-flex justify-content-center mb-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <p class="text-center">Our AI is analyzing this entity and gathering evidence from external sources. This may take a moment...</p>
+                </div>
+                <div id="analysisResults" style="display: none;">
+                    <div class="alert alert-success mb-3">
+                        <i class="fas fa-check-circle me-2"></i>Analysis completed successfully!
+                    </div>
+                    <div id="analysisContent"></div>
+                </div>
+                <div id="analysisError" style="display: none;">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>An error occurred during analysis.
+                        <div id="errorDetails" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="viewEntityButton" class="btn btn-primary" style="display: none;">View Entity Details</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Generation Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportModalLabel">Generating Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="reportProgress">
+                    <div class="d-flex justify-content-center mb-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <p class="text-center">Generating comprehensive entity report. This may take a moment...</p>
+                </div>
+                <div id="reportSuccess" style="display: none;">
+                    <div class="alert alert-success mb-3">
+                        <i class="fas fa-check-circle me-2"></i>Report generated successfully!
+                    </div>
+                    <p>Your report is ready to view. You can access it using the button below.</p>
+                </div>
+                <div id="reportError" style="display: none;">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>An error occurred while generating the report.
+                        <div id="reportErrorDetails" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="viewReportButton" class="btn btn-primary" style="display: none;">View Report</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/data_tables.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize entity table
+    initializeDataTable('#entityTable', {
+        order: [[3, 'desc']], // Sort by risk score descending by default
+        columnDefs: [
+            {
+                targets: 3,
+                render: function(data, type, row) {
+                    // Format risk score
+                    if (type === 'display') {
+                        let color = 'low';
+                        if (parseFloat(data) >= 7) {
+                            color = 'high';
+                        } else if (parseFloat(data) >= 4) {
+                            color = 'medium';
+                        }
+                        return `<div class="risk-score-pill risk-${color}">${data}</div>`;
+                    }
+                    return data;
+                }
+            }
+        ]
+    });
+    
+    // Entity AI Analysis
+    document.querySelectorAll('.analyze-entity').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const entityId = this.getAttribute('data-entity-id');
+            const modal = new bootstrap.Modal(document.getElementById('aiAnalysisModal'));
+            
+            // Reset modal state
+            document.getElementById('analysisProgress').style.display = 'block';
+            document.getElementById('analysisResults').style.display = 'none';
+            document.getElementById('analysisError').style.display = 'none';
+            document.getElementById('viewEntityButton').style.display = 'none';
+            
+            // Show modal
+            modal.show();
+            
+            // Make API request to analyze entity
+            fetch(`/api/analyze-entity/${entityId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide progress indicator
+                document.getElementById('analysisProgress').style.display = 'none';
+                
+                if (data.success) {
+                    // Show results
+                    document.getElementById('analysisResults').style.display = 'block';
+                    document.getElementById('viewEntityButton').style.display = 'inline-block';
+                    document.getElementById('viewEntityButton').href = `/entity/${entityId}`;
+                    
+                    // Format and display analysis results
+                    let analysisHtml = `
+                        <div class="mb-3">
+                            <h5>New Risk Score: <span class="badge bg-${data.new_risk_score >= 7 ? 'danger' : data.new_risk_score >= 4 ? 'warning' : 'success'}">${data.new_risk_score}</span></h5>
+                        </div>
+                        <div class="mb-3">
+                            <h5>AI Analysis Results:</h5>
+                            <div class="card">
+                                <div class="card-body">
+                                    <pre class="analysis-json">${JSON.stringify(data.analysis, null, 2)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h5>External Data:</h5>
+                            <div class="card">
+                                <div class="card-body">
+                                    <pre class="analysis-json">${JSON.stringify(data.external_data, null, 2)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('analysisContent').innerHTML = analysisHtml;
+                } else {
+                    // Show error
+                    document.getElementById('analysisError').style.display = 'block';
+                    document.getElementById('errorDetails').textContent = data.error || 'Unknown error occurred';
+                }
+            })
+            .catch(error => {
+                // Hide progress and show error
+                document.getElementById('analysisProgress').style.display = 'none';
+                document.getElementById('analysisError').style.display = 'block';
+                document.getElementById('errorDetails').textContent = error.message || 'Network error occurred';
+            });
+        });
+    });
+    
+    // Generate Report
+    document.querySelectorAll('.generate-report').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const entityId = this.getAttribute('data-entity-id');
+            const modal = new bootstrap.Modal(document.getElementById('reportModal'));
+            
+            // Reset modal state
+            document.getElementById('reportProgress').style.display = 'block';
+            document.getElementById('reportSuccess').style.display = 'none';
+            document.getElementById('reportError').style.display = 'none';
+            document.getElementById('viewReportButton').style.display = 'none';
+            
+            // Show modal
+            modal.show();
+            
+            // Make API request to generate report
+            fetch(`/api/generate-report/${entityId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide progress indicator
+                document.getElementById('reportProgress').style.display = 'none';
+                
+                if (data.success) {
+                    // Show success
+                    document.getElementById('reportSuccess').style.display = 'block';
+                    document.getElementById('viewReportButton').style.display = 'inline-block';
+                    document.getElementById('viewReportButton').href = `/report/${data.report_id}`;
+                } else {
+                    // Show error
+                    document.getElementById('reportError').style.display = 'block';
+                    document.getElementById('reportErrorDetails').textContent = data.error || 'Unknown error occurred';
+                }
+            })
+            .catch(error => {
+                // Hide progress and show error
+                document.getElementById('reportProgress').style.display = 'none';
+                document.getElementById('reportError').style.display = 'block';
+                document.getElementById('reportErrorDetails').textContent = error.message || 'Network error occurred';
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
